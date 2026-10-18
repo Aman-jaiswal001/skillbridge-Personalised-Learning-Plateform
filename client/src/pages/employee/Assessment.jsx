@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ClipboardCheck, Clock3, RotateCcw } from 'lucide-react'
 import { normalizeAssessment } from '../../api/normalizers'
 import { apiRequest, extractData } from '../../api/client'
@@ -10,7 +10,13 @@ import PageContainer from '../../components/common/PageContainer'
 import { useApiData } from '../../hooks/useApiData'
 
 export default function Assessment() {
-  const { data = [], loading, error, reload } = useApiData('/assessments', { initialData: [] })
+  const [searchParams] = useSearchParams()
+  const skillId = searchParams.get('skillId') || ''
+  const level = searchParams.get('level') || ''
+  const query = new URLSearchParams()
+  if (skillId) query.set('skillId', skillId)
+  if (level) query.set('level', level)
+  const { data = [], loading, error, reload } = useApiData(`/assessments${query.size ? `?${query}` : ''}`, { initialData: [] })
   const navigate = useNavigate()
   const assessments = data.map(normalizeAssessment)
 
@@ -26,7 +32,7 @@ export default function Assessment() {
   }
 
   return (
-    <PageContainer title="Skill Assessments" subtitle="Choose an assessment, continue an attempt, or review your results." actions={<Button variant="secondary" onClick={reload}>Refresh</Button>}>
+    <PageContainer title="Skill Assessments" subtitle={skillId ? `Progression assessments for ${level || 'all levels'}. Pass the current level to unlock the next one.` : "Choose an assessment, continue an attempt, or review your results."} actions={<Button variant="secondary" onClick={reload}>Refresh</Button>}>
       {loading ? <Loading label="Loading assessments..." /> : null}
       {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       {!loading && !error && assessments.length === 0 ? <EmptyState title="No assessments available" description="Available assessments will appear here when they are published." /> : null}
@@ -34,13 +40,14 @@ export default function Assessment() {
         {assessments.map((assessment) => (
           <article key={assessment.id} className="flex flex-col rounded-xl border border-line bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
-              <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-wide text-primary">{assessment.category || 'General'}</p><Badge>{assessment.difficulty || 'Medium'}</Badge></div><h2 className="mt-1 text-lg font-semibold text-navy">{assessment.title}</h2></div>
+              <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-wide text-primary">{assessment.category || 'General'}</p><Badge>{assessment.level} level</Badge>{assessment.locked ? <Badge status="Locked">{assessment.lockReason === 'ENROLLMENT' ? 'Add skill first' : `Unlock ${assessment.level}`}</Badge> : <Badge>{assessment.passingScore}% to pass</Badge>}</div><h2 className="mt-1 text-lg font-semibold text-navy">{assessment.title}</h2></div>
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-primary"><ClipboardCheck size={20} /></span>
             </div>
             {assessment.description ? <p className="mt-3 line-clamp-3 text-sm text-muted">{assessment.description}</p> : null}
             <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted"><span>{assessment.questionCount} questions</span><span className="inline-flex items-center gap-1"><Clock3 size={13} />{assessment.duration}</span><span>{assessment.attemptCount} completed attempts</span></div>
+            {assessment.myResult ? <p className={`mt-3 text-xs font-medium ${assessment.myResult.passed ? 'text-emerald-700' : 'text-amber-700'}`}>{assessment.myResult.passed ? 'Level passed' : 'Not passed yet'} · latest score {assessment.myResult.percentage}%</p> : null}
             <div className="mt-auto flex flex-wrap gap-2 pt-5">
-              {assessment.attemptStatus === 'IN_PROGRESS' ? <Button onClick={() => navigate(`/assessment/attempt/${assessment.activeAttemptId}`)}>Continue Assessment</Button> : assessment.canRetake === false && assessment.myResult ? <span className="self-center text-xs text-muted">Retakes unavailable</span> : <Button onClick={() => begin(assessment.id)}>{assessment.attemptCount ? <><RotateCcw size={15} /> Retake Assessment</> : 'Start Assessment'}</Button>}
+              {assessment.locked ? (assessment.lockReason === 'ENROLLMENT' ? <Link to="/skills"><Button variant="secondary">Add skill in My Skills</Button></Link> : <Button disabled>Level locked</Button>) : (assessment.attemptStatus === 'IN_PROGRESS' ? <Button onClick={() => navigate(`/assessment/attempt/${assessment.activeAttemptId}`)}>Continue Assessment</Button> : assessment.canRetake === false && assessment.myResult ? <span className="self-center text-xs text-muted">Retakes unavailable</span> : <Button onClick={() => begin(assessment.id)}>{assessment.attemptCount ? <><RotateCcw size={15} /> Retake Assessment</> : 'Start Assessment'}</Button>)}
               {assessment.myResult ? <Link to={`/assessment/result/${assessment.myResult.id}`}><Button variant="secondary">View Result</Button></Link> : null}
             </div>
           </article>

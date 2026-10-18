@@ -8,12 +8,12 @@ export const history = asyncHandler(async (req, res) => {
 })
 
 export const list = asyncHandler(async (req, res) => {
-  const data = await assessmentService.listAssessments(req.user._id)
+  const data = await assessmentService.listAssessments(req.user._id, req.query)
   success(res, data)
 })
 
 export const getOne = asyncHandler(async (req, res) => {
-  const data = await assessmentService.getAssessment(req.params.id)
+  const data = await assessmentService.getAssessment(req.params.id, req.user._id)
   success(res, data)
 })
 

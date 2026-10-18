@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 
-const ROLES = ['STUDENT', 'ADMIN', 'TRAINER']
+const ROLES = ['STUDENT', 'ADMIN']
 
 const userSchema = new mongoose.Schema(
   {

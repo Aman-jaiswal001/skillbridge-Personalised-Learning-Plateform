@@ -11,13 +11,13 @@ import { useToast } from '../../context/ToastContext'
 import { useApiData } from '../../hooks/useApiData'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
-const levels = ['Easy', 'Medium', 'Hard']
+const levels = ['Beginner', 'Intermediate', 'Advanced']
 
 export default function BulkAssessmentUpload() {
   const inputRef = useRef(null)
   const [file, setFile] = useState(null)
   const [targetId, setTargetId] = useState('')
-  const [settings, setSettings] = useState({ title: '', category: '', difficulty: 'Medium', duration: 30, description: '', allowRetakes: true, published: false })
+  const [settings, setSettings] = useState({ title: '', category: '', level: 'Intermediate', duration: 30, description: '', allowRetakes: true, published: false })
   const [requestId, setRequestId] = useState(makeRequestId())
   const [preview, setPreview] = useState(null)
   const [result, setResult] = useState(null)
@@ -86,12 +86,12 @@ export default function BulkAssessmentUpload() {
     body.append('requestId', requestId)
     if (targetId) {
       body.append('assessmentId', targetId)
-      body.append('difficulty', activeAssessments.find((assessment) => assessment._id === targetId)?.difficulty || 'Medium')
+      body.append('level', activeAssessments.find((assessment) => assessment._id === targetId)?.level || 'Intermediate')
     }
     else {
       body.append('title', settings.title)
       body.append('category', settings.category)
-      body.append('difficulty', settings.difficulty)
+      body.append('level', settings.level)
       body.append('duration', String(settings.duration))
       body.append('description', settings.description)
       body.append('allowRetakes', String(settings.allowRetakes))
@@ -121,7 +121,7 @@ export default function BulkAssessmentUpload() {
   return <PageContainer title="Bulk Assessment Upload" subtitle="Validate an Excel worksheet, preview MCQs, then append them or create a new assessment." actions={<Link to="/admin/assessments"><Button variant="secondary">Back to Assessments</Button></Link>}>
     <section className="space-y-4 rounded-xl border border-line bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-navy">Step 1 · Prepare your workbook</h2><p className="text-sm text-muted">Download the template and fill one MCQ per row.</p></div><Button variant="secondary" disabled={busy === 'template'} onClick={downloadTemplate}>{busy === 'template' ? 'Preparing...' : 'Download Excel Template'}</Button></div>
-      <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">Required columns: <code>questionText</code>, <code>optionA</code>–<code>optionD</code>, and <code>correctAnswer</code>. Optional columns: explanation, skill, difficulty, marks.</p>
+      <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">Required columns: <code>questionText</code>, <code>optionA</code>–<code>optionD</code>, and <code>correctAnswer</code>. Optional columns: explanation, skill, level, marks. The importer also accepts legacy difficulty values.</p>
     </section>
 
     <section className="space-y-4 rounded-xl border border-line bg-white p-5 shadow-sm">
@@ -129,7 +129,7 @@ export default function BulkAssessmentUpload() {
       {assessmentsError ? <p role="alert" className="text-sm text-rose-700">{assessmentsError}</p> : null}
       {assessmentsLoading ? <Loading label="Loading assessments..." /> : null}
       <label className="block max-w-2xl text-sm font-medium text-navy">Import questions into<select aria-label="Target assessment" value={targetId} onChange={(event) => changeTarget(event.target.value)} className={inputClass}><option value="">Create a new assessment</option>{activeAssessments.map((assessment) => <option key={assessment._id} value={assessment._id}>{assessment.title} · {assessment.category} · {assessment.isPublished ? 'Published' : 'Draft'}</option>)}</select></label>
-      {newAssessment ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><Field label="Assessment title"><input required value={settings.title} onChange={(event) => changeSetting('title', event.target.value)} className={inputClass} maxLength={160} /></Field><Field label="Topic / category"><input required value={settings.category} onChange={(event) => changeSetting('category', event.target.value)} className={inputClass} maxLength={120} /></Field><Field label="Difficulty"><select value={settings.difficulty} onChange={(event) => changeSetting('difficulty', event.target.value)} className={inputClass}>{levels.map((level) => <option key={level}>{level}</option>)}</select></Field><Field label="Duration (minutes)"><input type="number" min="1" max="300" value={settings.duration} onChange={(event) => changeSetting('duration', event.target.value)} className={inputClass} /></Field><Field label="Description"><input value={settings.description} onChange={(event) => changeSetting('description', event.target.value)} className={inputClass} maxLength={2000} /></Field><div className="flex flex-col justify-end gap-2 pb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.allowRetakes} onChange={(event) => changeSetting('allowRetakes', event.target.checked)} />Allow retakes</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.published} onChange={(event) => changeSetting('published', event.target.checked)} />Publish after import</label></div></div> : <p className="text-sm text-muted">Questions will be appended. Existing questions and results are preserved; duplicate question text is skipped.</p>}
+      {newAssessment ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><Field label="Assessment title"><input required value={settings.title} onChange={(event) => changeSetting('title', event.target.value)} className={inputClass} maxLength={160} /></Field><Field label="Topic / category"><input required value={settings.category} onChange={(event) => changeSetting('category', event.target.value)} className={inputClass} maxLength={120} /></Field><Field label="Progression level"><select value={settings.level} onChange={(event) => changeSetting('level', event.target.value)} className={inputClass}>{levels.map((level) => <option key={level}>{level}</option>)}</select></Field><Field label="Duration (minutes)"><input type="number" min="1" max="300" value={settings.duration} onChange={(event) => changeSetting('duration', event.target.value)} className={inputClass} /></Field><Field label="Description"><input value={settings.description} onChange={(event) => changeSetting('description', event.target.value)} className={inputClass} maxLength={2000} /></Field><div className="flex flex-col justify-end gap-2 pb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.allowRetakes} onChange={(event) => changeSetting('allowRetakes', event.target.checked)} />Allow retakes</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.published} onChange={(event) => changeSetting('published', event.target.checked)} />Publish after import</label></div></div> : <p className="text-sm text-muted">Questions will be appended. Existing questions and results are preserved; duplicate question text is skipped.</p>}
     </section>
 
     <section className="space-y-4 rounded-xl border border-line bg-white p-5 shadow-sm">
@@ -147,7 +147,7 @@ export default function BulkAssessmentUpload() {
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[['Total rows', summary.totalRows], ['Valid questions', summary.validQuestions], ['Imported questions', summary.importedQuestions ?? '—'], ['Skipped rows', summary.skippedRows]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-muted">{label}</p><p className="mt-1 text-xl font-semibold text-navy">{value}</p></div>)}</div>
       {summary.headerErrors?.length ? <ErrorList errors={summary.headerErrors} /> : null}
       {summary.errors?.length ? <ErrorList errors={summary.errors} /> : null}
-      {summary.preview?.length || summary.rows?.length ? <div className="overflow-x-auto rounded-lg border border-line"><table className="min-w-[1050px] border-collapse text-left text-xs"><thead className="bg-slate-50 text-muted"><tr>{['Excel row', 'Status', 'Question', 'Choices', 'Answer', 'Difficulty', 'Marks', 'Details'].map((heading) => <th key={heading} className="border-b border-line px-3 py-2 font-semibold">{heading}</th>)}</tr></thead><tbody>{(summary.preview || summary.rows).map((row) => <tr key={row.row} className="align-top"><td className="border-b border-line px-3 py-2">{row.row}</td><td className="border-b border-line px-3 py-2"><Badge status={row.status === 'valid' || row.status === 'imported' ? 'Completed' : row.status === 'duplicate' ? 'In Progress' : 'Not Started'}>{row.status}</Badge></td><td className="max-w-xs whitespace-normal border-b border-line px-3 py-2">{row.question || '—'}</td><td className="max-w-xs whitespace-normal border-b border-line px-3 py-2">{(row.options || []).map((option, index) => <p key={index}>{String.fromCharCode(65 + index)}. {option}</p>)}</td><td className="border-b border-line px-3 py-2">{row.correctAnswer || '—'}</td><td className="border-b border-line px-3 py-2">{row.difficulty || '—'}</td><td className="border-b border-line px-3 py-2">{row.marks ?? '—'}</td><td className="max-w-sm whitespace-normal border-b border-line px-3 py-2 text-rose-700">{row.error || '—'}</td></tr>)}</tbody></table></div> : null}
+      {summary.preview?.length || summary.rows?.length ? <div className="overflow-x-auto rounded-lg border border-line"><table className="min-w-[1050px] border-collapse text-left text-xs"><thead className="bg-slate-50 text-muted"><tr>{['Excel row', 'Status', 'Question', 'Choices', 'Answer', 'Progression level', 'Marks', 'Details'].map((heading) => <th key={heading} className="border-b border-line px-3 py-2 font-semibold">{heading}</th>)}</tr></thead><tbody>{(summary.preview || summary.rows).map((row) => <tr key={row.row} className="align-top"><td className="border-b border-line px-3 py-2">{row.row}</td><td className="border-b border-line px-3 py-2"><Badge status={row.status === 'valid' || row.status === 'imported' ? 'Completed' : row.status === 'duplicate' ? 'In Progress' : 'Not Started'}>{row.status}</Badge></td><td className="max-w-xs whitespace-normal border-b border-line px-3 py-2">{row.question || '—'}</td><td className="max-w-xs whitespace-normal border-b border-line px-3 py-2">{(row.options || []).map((option, index) => <p key={index}>{String.fromCharCode(65 + index)}. {option}</p>)}</td><td className="border-b border-line px-3 py-2">{row.correctAnswer || '—'}</td><td className="border-b border-line px-3 py-2">{row.level || '—'}</td><td className="border-b border-line px-3 py-2">{row.marks ?? '—'}</td><td className="max-w-sm whitespace-normal border-b border-line px-3 py-2 text-rose-700">{row.error || '—'}</td></tr>)}</tbody></table></div> : null}
       {result ? <div className="flex flex-wrap gap-2"><Link to="/admin/assessments"><Button>Return to Assessment Management</Button></Link><Button variant="secondary" onClick={() => { setResult(null); setFile(null); setPreview(null); setRequestId(makeRequestId()) }}>Import another spreadsheet</Button></div> : null}
     </section> : null}
 

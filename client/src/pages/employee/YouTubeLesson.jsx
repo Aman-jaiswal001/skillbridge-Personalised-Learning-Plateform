@@ -16,7 +16,7 @@ export default function YouTubeLesson() {
   const video = item?.resource
 
   async function complete() {
-    try { await apiRequest(`/youtube-learning/items/${itemId}`, { method: 'PATCH', body: { status: 'Completed' } }); await reload(); push('Marked as completed') }
+    try { await apiRequest(`/youtube-learning/items/${itemId}`, { method: 'PATCH', body: { status: 'Completed' } }); await reload(); window.dispatchEvent(new Event('skillbridge:learning-updated')); push('Marked as completed') }
     catch (err) { push(err.message, 'error') }
   }
   async function remove() {

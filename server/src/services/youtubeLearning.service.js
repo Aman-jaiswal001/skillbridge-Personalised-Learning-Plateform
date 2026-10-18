@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 import { YouTubeLearningItem } from "../models/YouTubeLearningItem.js";
 import { YouTubeResource } from "../models/YouTubeResource.js";
+import { EmployeeSkill } from "../models/EmployeeSkill.js";
+import { Skill } from "../models/Skill.js";
 import { ApiError } from "../utils/ApiError.js";
+import { isMasteryLevelUnlocked, MASTERY_LEVELS, masteryLevelRank, normalizeMasteryLevel, unlockedMasteryLevel } from "../utils/skillProgress.js";
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const fields = [
   "title",
   "description",
@@ -55,6 +59,22 @@ export function extractYouTubeVideoId(value) {
   return id;
 }
 
+async function assertVideoLevelUnlocked(userId, resource) {
+  const resourceLevel = normalizeMasteryLevel(resource.difficulty)
+  // Beginner lessons are the catalog entry point for new learners. Higher
+  // levels still require enrollment and follow the skill's mastery unlock.
+  if (resourceLevel === 'Beginner') return
+  const names = resource.skills || []
+  if (!names.length) return
+  const regexes = names.map((name) => new RegExp(`^${escapeRegex(name)}$`, 'i'))
+  const skillDocs = await Skill.find({ name: { $in: regexes } }).select('_id name').lean()
+  if (!skillDocs.length) return
+  const rows = await EmployeeSkill.find({ employeeId: userId, skillId: { $in: skillDocs.map((skill) => skill._id) } }).lean()
+  const unlocked = rows.some((row) => isMasteryLevelUnlocked(resourceLevel, unlockedMasteryLevel(row)))
+  if (!rows.length) throw ApiError.forbidden('Add this video’s skill to My Skills before opening its learning stage')
+  if (!unlocked) throw ApiError.forbidden(`${resourceLevel} lessons are locked until you pass the previous level assessment`)
+}
+
 function normalizeInput(body, { partial = false } = {}) {
   const input = {};
   for (const key of fields)
@@ -100,11 +120,20 @@ function validateId(id) {
     throw ApiError.badRequest("Invalid resource identifier");
 }
 
-export async function listResources(query, { admin = false } = {}) {
+export async function listResources(query, { admin = false, userId } = {}) {
   const filter = admin ? {} : { isPublished: true };
   if (query.category) filter.category = query.category;
   if (query.difficulty) filter.difficulty = query.difficulty;
-  if (query.skill) filter.skills = query.skill;
+  if (query.skill) filter.skills = new RegExp(`^${escapeRegex(query.skill)}$`, 'i');
+  if (!admin && userId && query.skill) {
+    const skill = await Skill.findOne({ name: new RegExp(`^${escapeRegex(query.skill)}$`, 'i') }).select('_id')
+    if (skill) {
+      const enrollment = await EmployeeSkill.findOne({ employeeId: userId, skillId: skill._id }).lean()
+      const unlockedRank = enrollment ? masteryLevelRank(unlockedMasteryLevel(enrollment)) : -1
+      const allowedLevels = enrollment ? MASTERY_LEVELS.slice(0, unlockedRank + 1) : ['Beginner']
+      filter.difficulty = query.difficulty ? (allowedLevels.includes(query.difficulty) ? query.difficulty : { $in: [] }) : { $in: allowedLevels }
+    }
+  }
   const search = String(query.search || "").trim();
   if (search) filter.$text = { $search: search.slice(0, 100) };
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -126,8 +155,24 @@ export async function listResources(query, { admin = false } = {}) {
       .lean(),
     YouTubeResource.countDocuments(filter),
   ]);
+  let visibleData = data
+  if (!admin && userId && data.length) {
+    const studentSkills = await EmployeeSkill.find({ employeeId: userId }).populate('skillId', 'name').lean()
+    const tagNames = [...new Set(data.flatMap((resource) => resource.skills || []).map((name) => String(name).trim()).filter(Boolean))]
+    const knownSkills = await Skill.find({ name: { $in: tagNames.map((name) => new RegExp(`^${escapeRegex(name)}$`, 'i')) } }).select('name').lean()
+    const knownSkillNames = new Set(knownSkills.map((skill) => skill.name.toLowerCase().trim()))
+    visibleData = data.map((resource) => {
+      const tags = new Set((resource.skills || []).map((name) => String(name).toLowerCase().trim()))
+      const related = studentSkills.filter((row) => tags.has(String(row.skillId?.name || '').toLowerCase().trim()))
+      const isSkillTagged = [...tags].some((name) => knownSkillNames.has(name))
+      const beginnerEntry = normalizeMasteryLevel(resource.difficulty) === 'Beginner'
+      const unlocked = beginnerEntry || related.some((row) => isMasteryLevelUnlocked(resource.difficulty, unlockedMasteryLevel(row)))
+      const requiresEnrollment = isSkillTagged && !related.length && !beginnerEntry
+      return { ...resource, locked: isSkillTagged && !unlocked, requiresEnrollment, unlockedLevel: related.map(unlockedMasteryLevel).sort((a, b) => masteryLevelRank(b) - masteryLevelRank(a))[0] || null }
+    })
+  }
   return {
-    data,
+    data: visibleData,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   };
 }
@@ -167,6 +212,7 @@ export async function addLearningItem(userId, resourceId) {
   }).lean();
   if (!resource)
     throw ApiError.notFound("Published YouTube resource not found");
+  await assertVideoLevelUnlocked(userId, resource)
   let item = await YouTubeLearningItem.findOne({ userId, resourceId });
   if (item) {
     item.lastAccessedAt = new Date();
@@ -202,6 +248,7 @@ export async function getLearningItem(userId, id) {
   validateId(id);
   const item = await YouTubeLearningItem.findOne({ _id: id, userId });
   if (!item) throw ApiError.notFound("Learning item not found");
+  await assertVideoLevelUnlocked(userId, item.resource)
   if (item.status !== "Completed") item.status = "In Progress";
   item.lastAccessedAt = new Date();
   await item.save();

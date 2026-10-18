@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../../api/client";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
@@ -10,20 +10,26 @@ import { useToast } from "../../context/ToastContext";
 import { useApiData } from "../../hooks/useApiData";
 
 export default function YouTubeCatalog() {
+  const [searchParams] = useSearchParams()
+  const initialSkill = searchParams.get("skill") || ""
+  const initialDifficulty = searchParams.get("difficulty") || ""
+  const initialFilters = new URLSearchParams()
+  if (initialSkill) initialFilters.set("skill", initialSkill)
+  if (initialDifficulty) initialFilters.set("difficulty", initialDifficulty)
   const {
     data = [],
     loading,
     error,
     reload,
-  } = useApiData("/youtube-learning/resources", { initialData: [] });
+  } = useApiData(`/youtube-learning/resources${initialFilters.size ? `?${initialFilters}` : ""}`, { initialData: [] });
   const { data: items = [], reload: reloadItems } = useApiData(
     "/youtube-learning/items",
     { initialData: [] },
   );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
-  const [skill, setSkill] = useState("");
-  const [difficulty, setDifficulty] = useState("");
+  const [skill, setSkill] = useState(initialSkill);
+  const [difficulty, setDifficulty] = useState(initialDifficulty);
   const [busy, setBusy] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -190,6 +196,7 @@ export default function YouTubeCatalog() {
                 <div className="space-y-3 p-4">
                   <div className="flex flex-wrap gap-2">
                     <Badge>{video.difficulty}</Badge>
+                    {video.locked ? <Badge status="Locked">{video.requiresEnrollment ? "Add skill to unlock" : `Locked · ${video.unlockedLevel || "Beginner"} unlocked`}</Badge> : null}
                     <Badge>{video.duration || "Video lesson"}</Badge>
                     <Badge>{video.category}</Badge>
                   </div>
@@ -206,7 +213,7 @@ export default function YouTubeCatalog() {
                   </div>
                   <Button
                     className="w-full"
-                    disabled={busy === video._id}
+                    disabled={busy === video._id || video.locked}
                     onClick={() => start(video)}
                   >
                     {busy === video._id
@@ -215,6 +222,7 @@ export default function YouTubeCatalog() {
                         ? "Resume Learning"
                         : "Start Learning"}
                   </Button>
+                  {video.locked && video.requiresEnrollment ? <Link to="/skills" className="block text-center text-xs font-semibold text-primary">Add this skill in My Skills</Link> : null}
                 </div>
               </article>
             );

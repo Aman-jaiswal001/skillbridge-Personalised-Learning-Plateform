@@ -1,6 +1,7 @@
 import { BookOpen, ClipboardList, FileText, PlayCircle, UserPlus, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import Button from '../../components/common/Button'
 import ChartCard from '../../components/common/ChartCard'
 import Loading from '../../components/common/Loading'
 import PageContainer from '../../components/common/PageContainer'

@@ -19,33 +19,87 @@ export async function employeeAnalytics(userId) {
   const skills = await EmployeeSkill.find({ employeeId: userId }).populate('skillId')
   const gaps = analyseEmployeeSkills(skills)
   const progress = await Progress.find({ employeeId: userId })
-  const assessments = await AssessmentResult.find({ employeeId: userId, $or: [{ status: 'COMPLETED' }, { status: { $exists: false } }] }).sort({ completedAt: 1 })
-  const quizzes = await QuizAttempt.find({ employeeId: userId }).sort({ completedAt: -1 }).limit(1)
+  const [assessments, quizzes] = await Promise.all([
+    AssessmentResult.find({ employeeId: userId, $or: [{ status: 'COMPLETED' }, { status: { $exists: false } }] })
+      .populate('assessmentId', 'title category level difficulty passingScore')
+      .sort({ completedAt: 1, submittedAt: 1 }),
+    QuizAttempt.find({ employeeId: userId })
+      .populate('quizId', 'title topic difficulty')
+      .sort({ completedAt: 1 }),
+  ])
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-  const base = profile?.competencyScore || gaps.overallCompetency || 72
-  const competencyGrowth = months.map((month, i) => ({
-    month,
-    score: Math.max(40, Math.round(base - (5 - i) * 2.5)),
-  }))
-  const learningHours = months.map((month, i) => ({
-    month,
-    hours: [6, 8, 7, 9, 10, 8][i],
-  }))
-
-  const latestQuiz = quizzes[0]
+  const toLevel = (level, difficulty) => level || ({ Easy: 'Beginner', Medium: 'Intermediate', Hard: 'Advanced' })[difficulty] || 'Beginner'
+  const formalAttempts = assessments.map((attempt) => {
+    const assessment = attempt.assessmentId || {}
+    const level = attempt.assessmentLevel || toLevel(assessment.level, assessment.difficulty)
+    const passingScore = attempt.passingScore ?? assessment.passingScore ?? 70
+    const percentage = Number(attempt.percentage) || 0
+    return {
+      id: String(attempt._id), title: assessment.title || 'Assessment', category: assessment.category || 'General',
+      type: 'Skill assessment', level, score: attempt.score || 0, total: attempt.total || 0, percentage,
+      passed: attempt.passed ?? percentage >= passingScore, completedAt: attempt.completedAt || attempt.submittedAt,
+    }
+  })
+  const quizAttempts = quizzes.map((attempt) => {
+    const quiz = attempt.quizId || {}
+    const level = toLevel(null, quiz.difficulty)
+    const percentage = Number(attempt.percentage) || 0
+    return {
+      id: String(attempt._id), title: quiz.title || 'Learning quiz', category: quiz.topic || 'Learning content',
+      type: 'Learning quiz', level, score: attempt.score || 0, total: attempt.total || 0, percentage,
+      passed: percentage >= 70, completedAt: attempt.completedAt,
+    }
+  })
+  const allAttempts = [...formalAttempts, ...quizAttempts].sort((a, b) => new Date(a.completedAt || 0) - new Date(b.completedAt || 0))
+  const monthlyScores = new Map()
+  for (const attempt of allAttempts) {
+    if (!attempt.completedAt) continue
+    const date = new Date(attempt.completedAt)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const row = monthlyScores.get(key) || { month: date.toLocaleString('en', { month: 'short', year: '2-digit' }), total: 0, count: 0 }
+    row.total += attempt.percentage
+    row.count += 1
+    monthlyScores.set(key, row)
+  }
+  const assessmentScoreTrend = [...monthlyScores.values()].map((row) => ({ month: row.month, score: Math.round(row.total / row.count) }))
+  const typeMap = new Map()
+  for (const attempt of allAttempts) {
+    const name = `${attempt.type} · ${attempt.level}`
+    const row = typeMap.get(name) || { name, attempts: 0, totalScore: 0, passed: 0, failed: 0 }
+    row.attempts += 1
+    row.totalScore += attempt.percentage
+    if (attempt.passed) row.passed += 1
+    else row.failed += 1
+    typeMap.set(name, row)
+  }
+  const assessmentByType = [...typeMap.values()].map(({ totalScore, ...row }) => ({ ...row, averageScore: Math.round(totalScore / row.attempts) }))
+  const overallCompetency = profile?.competencyScore ?? gaps.overallCompetency ?? 0
+  const growth = assessmentScoreTrend.length > 1 ? assessmentScoreTrend.at(-1).score - assessmentScoreTrend[0].score : 0
+  const completedAttemptCount = formalAttempts.length + quizAttempts.length
+  const passedAttemptCount = allAttempts.filter((attempt) => attempt.passed).length
+  const latestQuiz = quizzes.at(-1)
   return {
     cards: {
-      competencyGrowth: `+${Math.max(0, competencyGrowth.at(-1).score - competencyGrowth[0].score)}%`,
+      competencyGrowth: `${growth > 0 ? '+' : ''}${growth}%`,
       learningHours: progress.reduce((s, p) => s + (p.learningHours || 0), 0),
       coursesCompleted: progress.filter((p) => p.progressPercentage >= 100).length,
       assessmentsTaken: assessments.length,
+      learningQuizzesTaken: quizzes.length,
+      assessmentPassRate: completedAttemptCount ? Math.round(passedAttemptCount / completedAttemptCount * 100) : 0,
       certificatesEarned: progress.filter((p) => p.certificateEarned).length,
-      learningStreak: 12,
+      learningStreak: 0,
     },
-    overallCompetency: base,
-    competencyGrowth,
-    learningHoursChart: learningHours,
+    overallCompetency,
+    assessmentScoreTrend,
+    assessmentAnalytics: {
+      totalAttempts: completedAttemptCount,
+      passed: passedAttemptCount,
+      failed: completedAttemptCount - passedAttemptCount,
+      averageScore: completedAttemptCount ? Math.round(allAttempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / completedAttemptCount) : 0,
+      byType: assessmentByType,
+      recentAttempts: allAttempts.slice(-12).reverse(),
+    },
+    learningHoursChart: [],
     courseCompletionStats: [
       { name: 'Completed', value: progress.filter((p) => p.progressPercentage >= 100).length },
       { name: 'In Progress', value: progress.filter((p) => p.progressPercentage > 0 && p.progressPercentage < 100).length },

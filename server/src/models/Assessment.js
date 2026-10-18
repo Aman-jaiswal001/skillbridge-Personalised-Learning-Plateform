@@ -13,6 +13,7 @@ const assessmentSchema = new mongoose.Schema(
     },
 
     difficulty: { type: String, enum: ["Easy", "Medium", "Hard"], default: "Medium" },
+    level: { type: String, enum: ["Beginner", "Intermediate", "Advanced"], default: undefined, index: true },
 
     skills: [
       {
@@ -40,7 +41,7 @@ const assessmentSchema = new mongoose.Schema(
 
     passingScore: {
       type: Number,
-      default: 60,
+      default: 70,
     },
 
     allowRetakes: { type: Boolean, default: true },

@@ -3,7 +3,7 @@ import { paginated, success } from '../utils/response.js'
 import * as service from '../services/youtubeLearning.service.js'
 
 export const listResources = asyncHandler(async (req, res) => {
-  const { data, pagination } = await service.listResources(req.query, { admin: req.user.role === 'ADMIN' && req.query.admin === 'true' })
+  const { data, pagination } = await service.listResources(req.query, { admin: req.user.role === 'ADMIN' && req.query.admin === 'true', userId: req.user._id })
   paginated(res, data, pagination)
 })
 export const createResource = asyncHandler(async (req, res) => success(res, await service.createResource(req.body), 'YouTube resource created', 201))

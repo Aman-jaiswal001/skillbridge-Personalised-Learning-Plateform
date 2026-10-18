@@ -214,7 +214,7 @@ export default function YouTubeResourceManagement() {
           />
         </label>
         <label className="text-sm font-medium">
-          Difficulty
+          Learning level
           <select
             value={form.difficulty}
             onChange={(e) => change("difficulty", e.target.value)}

@@ -68,6 +68,7 @@ export default function AssessmentAttempt() {
     try {
       await apiRequest(`/assessments/attempts/${attemptId}/answers`, { method: 'PUT', body: { answers: questions.map((question) => ({ questionId: String(question.id), selected: answers[String(question.id)] ?? null })) } })
       const payload = await apiRequest(`/assessments/attempts/${attemptId}/submit`, { method: 'POST' })
+      window.dispatchEvent(new Event('skillbridge:learning-updated'))
       navigate(`/assessment/result/${extractData(payload)._id}`)
     } catch (err) {
       setError(err.message)
