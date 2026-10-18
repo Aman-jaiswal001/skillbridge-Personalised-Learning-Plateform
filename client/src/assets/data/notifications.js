@@ -1,0 +1,42 @@
+export const notifications = [
+  {
+    id: 1,
+    type: 'course',
+    title: 'New course recommended',
+    message: 'Machine Learning Fundamentals has been added based on your skill gap.',
+    time: '2 hours ago',
+    read: false,
+  },
+  {
+    id: 2,
+    type: 'assessment',
+    title: 'Assessment reminder',
+    message: 'Data Analytics Assessment is scheduled for 18 Sep 2026 at 02:30 PM.',
+    time: '5 hours ago',
+    read: false,
+  },
+  {
+    id: 3,
+    type: 'certificate',
+    title: 'You received a certificate',
+    message: 'Python Basics certificate is now available in your profile.',
+    time: 'Yesterday',
+    read: false,
+  },
+  {
+    id: 4,
+    type: 'material',
+    title: 'New learning material available',
+    message: 'Sampling Methods notes have been uploaded by NSSTA faculty.',
+    time: '2 days ago',
+    read: true,
+  },
+  {
+    id: 5,
+    type: 'system',
+    title: 'System update',
+    message: 'SkillBridge AI will undergo scheduled maintenance on Sunday 02:00–04:00 IST.',
+    time: '3 days ago',
+    read: true,
+  },
+]

@@ -1,0 +1,43 @@
+{
+  "name": "skillbridge-ai-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SkillBridge AI backend — competency, RAG assistant, and personalized learning APIs",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed/seed.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.72",
+    "@langchain/google-genai": "^0.2.16",
+    "@langchain/openai": "^0.6.9",
+    "@langchain/textsplitters": "^0.1.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jszip": "^3.10.1",
+    "langchain": "^0.3.33",
+    "mammoth": "^1.10.0",
+    "mongoose": "^8.18.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.14",
+    "pdf-parse": "^1.1.1",
+    "uuid": "^11.1.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4"
+  }
+}
