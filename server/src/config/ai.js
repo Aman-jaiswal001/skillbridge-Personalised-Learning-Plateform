@@ -13,8 +13,11 @@ export const aiConfig = {
 }
 
 export function hasLiveLlm() {
-  if (env.llmProvider === 'openai') return Boolean(env.openaiApiKey)
-  if (env.llmProvider === 'gemini' || env.llmProvider === 'google') return Boolean(env.googleApiKey)
+  const hasOpenAi = Boolean(env.openaiApiKey?.trim() && env.openaiModel?.trim())
+  const hasGemini = Boolean(env.googleApiKey?.trim() && env.geminiModel?.trim())
+  const primary = env.llmProvider === 'google' ? 'gemini' : env.llmProvider
+  if (primary === 'openai') return hasOpenAi || hasGemini
+  if (primary === 'gemini') return hasGemini || hasOpenAi
   return false
 }
 

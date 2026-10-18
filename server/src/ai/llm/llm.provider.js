@@ -1,5 +1,4 @@
 import { env } from '../../config/env.js'
-import { hasLiveLlm } from '../../config/ai.js'
 
 function toText(messages) {
   return messages
@@ -29,8 +28,7 @@ async function openaiChat(messages) {
     signal: AbortSignal.timeout(30000),
   })
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`OpenAI chat failed: ${res.status} ${body.slice(0, 200)}`)
+    throw new Error(`OpenAI chat failed with status ${res.status}`)
   }
   const json = await res.json()
   return json.choices?.[0]?.message?.content || ''
@@ -56,8 +54,7 @@ async function geminiChat(messages) {
     signal: AbortSignal.timeout(30000),
   })
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Gemini chat failed: ${res.status} ${body.slice(0, 200)}`)
+    throw new Error(`Gemini chat failed with status ${res.status}`)
   }
   const json = await res.json()
   return json.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || ''
@@ -94,28 +91,76 @@ function fallbackChat(messages) {
   return `${best.join(' ')}\n\n(Answer generated from retrieved learning material in development fallback mode.)`
 }
 
-export async function invokeLlm(messages) {
-  try {
-    if (env.llmProvider === 'openai' && hasLiveLlm()) return await openaiChat(messages)
-    if ((env.llmProvider === 'gemini' || env.llmProvider === 'google') && hasLiveLlm()) {
-      console.log('gemini llm called')
-      return await geminiChat(messages)
-    }
-  } catch (err) {
-    console.error('[llm] provider error, using fallback', err.message)
-  }
-  console.log('fallbackChat called')
-  return fallbackChat(messages)
-}
-
-export async function invokeJson(messages) {
-  const raw = await invokeLlm([
-    ...messages,
-    { role: 'system', content: 'Respond with valid JSON only. Do not wrap in markdown.' },
-  ])
+function parseJsonResponse(raw) {
   const cleaned = raw.replace(/```json|```/g, '').trim()
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
   if (start === -1 || end === -1) throw new Error('LLM did not return JSON')
   return JSON.parse(cleaned.slice(start, end + 1))
+}
+
+function normalizedProvider(provider) {
+  return provider === 'google' ? 'gemini' : provider
+}
+
+function safeFailureReason(error) {
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError') return 'timeout'
+  const status = Number(error?.message?.match(/status (\d{3})/i)?.[1])
+  return status ? `HTTP ${status}` : 'request or response error'
+}
+
+export function createLlmInvoker(options = {}) {
+  const primary = normalizedProvider(options.provider ?? env.llmProvider)
+  const credentials = {
+    openai: { key: options.openaiApiKey ?? env.openaiApiKey, model: options.openaiModel ?? env.openaiModel },
+    gemini: { key: options.geminiApiKey ?? env.googleApiKey, model: options.geminiModel ?? env.geminiModel },
+  }
+  const calls = {
+    openai: options.openaiChat || openaiChat,
+    gemini: options.geminiChat || geminiChat,
+  }
+  const runFallback = options.fallbackChat || fallbackChat
+  const reportFailure = options.onProviderError || ((provider, reason) => console.warn(`[llm] ${provider} failed (${reason}); trying next provider`))
+  const order = primary === 'openai' ? ['openai', 'gemini'] : primary === 'gemini' ? ['gemini', 'openai'] : []
+
+  async function run(messages, validate = (value) => value) {
+    let lastError
+    for (const provider of order) {
+      const { key, model } = credentials[provider]
+      if (!String(key || '').trim() || !String(model || '').trim()) continue
+      try {
+        const response = await calls[provider](messages)
+        if (typeof response !== 'string' || !response.trim()) throw new Error('Empty LLM response')
+        return validate(response)
+      } catch (error) {
+        lastError = error
+        reportFailure(provider, safeFailureReason(error))
+      }
+    }
+    try {
+      const response = await runFallback(messages)
+      if (typeof response !== 'string' || !response.trim()) throw new Error('Empty fallback response')
+      return validate(response)
+    } catch (error) {
+      throw error || lastError || new Error('All LLM providers failed')
+    }
+  }
+
+  return {
+    invokeLlm: (messages) => run(messages),
+    invokeJson: (messages) => run([
+      ...messages,
+      { role: 'system', content: 'Respond with valid JSON only. Do not wrap in markdown.' },
+    ], parseJsonResponse),
+  }
+}
+
+const defaultInvoker = createLlmInvoker()
+
+export async function invokeLlm(messages) {
+  return defaultInvoker.invokeLlm(messages)
+}
+
+export async function invokeJson(messages) {
+  return defaultInvoker.invokeJson(messages)
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest, extractData } from '../api/client'
 
 const identity = (value) => value
@@ -7,6 +7,8 @@ export function useApiData(path, { enabled = true, initialData = null, map = ide
   const [data, setData] = useState(initialData)
   const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState('')
+  const mapRef = useRef(map)
+  mapRef.current = map
 
   const load = useCallback(async () => {
     if (!enabled || !path) return null
@@ -14,7 +16,7 @@ export function useApiData(path, { enabled = true, initialData = null, map = ide
     setError('')
     try {
       const payload = await apiRequest(path)
-      const next = map(extractData(payload), payload)
+      const next = mapRef.current(extractData(payload), payload)
       setData(next)
       return next
     } catch (err) {
@@ -23,7 +25,7 @@ export function useApiData(path, { enabled = true, initialData = null, map = ide
     } finally {
       setLoading(false)
     }
-  }, [enabled, map, path])
+  }, [enabled, path])
 
   useEffect(() => {
     load()
