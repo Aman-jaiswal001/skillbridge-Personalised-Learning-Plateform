@@ -20,6 +20,8 @@ import analyticsRoutes from './routes/analytics.routes.js'
 import notificationRoutes from './routes/notification.routes.js'
 import adminRoutes from './routes/admin.routes.js'
 import reportRoutes from './routes/report.routes.js'
+import youtubeLearningRoutes from './routes/youtubeLearning.routes.js'
+import studyResourceRoutes from './routes/studyResource.routes.js'
 
 export function createApp() {
   const app = express()
@@ -59,6 +61,8 @@ export function createApp() {
   app.use('/api/notifications', notificationRoutes)
   app.use('/api/admin', adminRoutes)
   app.use('/api/reports', reportRoutes)
+  app.use('/api/youtube-learning', youtubeLearningRoutes)
+  app.use('/api/study-resources', studyResourceRoutes)
 
   app.use(notFoundMiddleware)
   app.use(errorMiddleware)

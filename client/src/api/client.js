@@ -56,6 +56,18 @@ export async function apiRequest(path, options = {}) {
   return payload
 }
 
+export async function apiRequestBlob(path) {
+  const token = getStoredToken()
+  const headers = new Headers()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const response = await fetch(buildUrl(path), { headers })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.message || `Request failed with status ${response.status}`)
+  }
+  return response.blob()
+}
+
 export function extractData(payload) {
   return payload?.data ?? payload
 }

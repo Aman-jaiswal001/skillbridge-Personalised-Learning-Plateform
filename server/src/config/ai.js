@@ -8,6 +8,8 @@ export const aiConfig = {
   chunkOverlap: 120,
   retrieveK: 5,
   quizMaxQuestions: 20,
+  quizReviewThreshold: env.quizReviewThreshold,
+  quizAdvanceThreshold: env.quizAdvanceThreshold,
 }
 
 export function hasLiveLlm() {

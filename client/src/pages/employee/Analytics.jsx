@@ -5,12 +5,15 @@ import Loading from '../../components/common/Loading'
 import PageContainer from '../../components/common/PageContainer'
 import StatCard from '../../components/common/StatCard'
 import { useApiData } from '../../hooks/useApiData'
+import { Link } from 'react-router-dom'
+import EmptyState from '../../components/common/EmptyState'
 
 const icons = [TrendingUp, Clock, BookOpen, ClipboardList, Award, Flame]
 const colors = ['#304FFE', '#7C3AED', '#16A34A']
 
 export default function Analytics() {
   const { data, loading } = useApiData('/analytics/employee', { initialData: null })
+  const { data: quizPerformance } = useApiData('/quiz/performance', { initialData: null })
   const cards = data?.cards || {}
   const analyticsCards = [
     { id: 'growth', label: 'Competency Growth', value: cards.competencyGrowth || '+0%', hint: 'Since baseline' },
@@ -67,6 +70,9 @@ export default function Analytics() {
             <Tooltip />
           </PieChart>
         </ResponsiveContainer>
+      </ChartCard>
+      <ChartCard title="Quiz performance and topics">
+        {quizPerformance?.completedQuizzes ? <div className="grid gap-4 md:grid-cols-3"><div><p className="text-xs text-muted">Average quiz score</p><p className="text-2xl font-bold text-primary">{quizPerformance.averageScore}%</p><p className="text-sm text-muted">{quizPerformance.completedQuizzes} completed quizzes</p></div><div><h3 className="text-sm font-semibold">Strengths</h3>{quizPerformance.strengths?.length ? quizPerformance.strengths.map((topic) => <p key={topic.topic} className="mt-1 text-sm">{topic.topic} · {topic.percentage}%</p>) : <p className="mt-1 text-sm text-muted">No strengths recorded yet.</p>}</div><div><h3 className="text-sm font-semibold">Needs practice</h3>{quizPerformance.weakTopics?.length ? quizPerformance.weakTopics.map((topic) => <p key={topic.topic} className="mt-1 text-sm">{topic.topic} · {topic.percentage}%</p>) : <p className="mt-1 text-sm text-muted">No weak topics recorded.</p>}</div><div className="md:col-span-3"><h3 className="text-sm font-semibold">Recent attempts</h3><div className="mt-2 space-y-2">{quizPerformance.recentAttempts?.slice(0, 5).map((attempt) => <div key={attempt._id} className="flex justify-between gap-3 rounded-lg bg-slate-50 p-2 text-sm"><span>{attempt.quizId?.title || 'Quiz'}</span><span>{attempt.percentage}% · {new Date(attempt.completedAt).toLocaleDateString()}</span></div>)}</div></div></div> : <EmptyState title="No quiz results yet" description="Complete a lesson quiz to see your performance here." action={<Link to="/learning-path" className="text-sm font-semibold text-primary">Open Learning Path</Link>} />}
       </ChartCard>
     </PageContainer>
   )

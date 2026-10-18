@@ -21,6 +21,7 @@ export default function Dashboard() {
   const { data: enrolledData = [] } = useApiData('/courses/my-courses', { initialData: [] })
   const { data: learningPath } = useApiData('/learning-path', { initialData: { stages: [] } })
   const { data: notificationData = [] } = useApiData('/notifications', { initialData: [] })
+  const { data: quizPerformance } = useApiData('/quiz/performance', { initialData: null })
 
   useEffect(() => {
     const onFocus = () => reloadBundle()
@@ -62,6 +63,15 @@ export default function Dashboard() {
         <StatCard icon={BookOpen} label="Courses completed" value={stats.coursesCompleted ?? 0} />
         <StatCard icon={Flame} label="Learning streak" value={`${stats.streak ?? 0} days`} />
       </div>
+
+      <section className={cardClass}>
+        <SectionHeader title="Quiz performance" action={<Link to="/analytics" className="text-sm font-semibold text-primary">View analytics</Link>} />
+        {quizPerformance?.completedQuizzes ? <div className="grid gap-4 md:grid-cols-[160px_1fr_1fr]">
+          <div className="rounded-xl bg-indigo-50 p-4"><p className="text-xs text-muted">Average score</p><p className="mt-1 text-2xl font-bold text-primary">{quizPerformance.averageScore}%</p><p className="text-xs text-muted">{quizPerformance.completedQuizzes} quizzes completed</p></div>
+          <div><h3 className="text-sm font-semibold text-navy">Strengths</h3>{quizPerformance.strengths?.length ? <ul className="mt-2 space-y-1 text-sm text-slate-600">{quizPerformance.strengths.map((row) => <li key={row.topic}>{row.topic} · {row.percentage}%</li>)}</ul> : <p className="mt-2 text-sm text-muted">Take more quizzes to identify strengths.</p>}</div>
+          <div><h3 className="text-sm font-semibold text-navy">Topics to practice</h3>{quizPerformance.weakTopics?.length ? <ul className="mt-2 space-y-1 text-sm text-slate-600">{quizPerformance.weakTopics.map((row) => <li key={row.topic}>{row.topic} · {row.percentage}%</li>)}</ul> : <p className="mt-2 text-sm text-muted">No weak topics found in recorded quizzes.</p>}</div>
+        </div> : <EmptyState title="No quiz results yet" description="Take a quiz from a video in your Learning Path to start tracking your performance." />}
+      </section>
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
         <section className={cardClass}>

@@ -33,7 +33,12 @@ export const env = {
   igotAdapter: (process.env.IGOT_ADAPTER || 'mock').toLowerCase(),
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   maxFileSize: Number(process.env.MAX_FILE_SIZE) || 20 * 1024 * 1024,
+  quizReviewThreshold: Number(process.env.QUIZ_REVIEW_THRESHOLD) || 50,
+  quizAdvanceThreshold: Number(process.env.QUIZ_ADVANCE_THRESHOLD) || 80,
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
   logLevel: process.env.LOG_LEVEL || 'info',
 }
 

@@ -45,4 +45,8 @@ export class ApiError extends Error {
   static ai(message = 'AI provider error', error = null) {
     return new ApiError(502, message, error)
   }
+
+  static internal(message = 'Internal server error') {
+    return new ApiError(500, message)
+  }
 }

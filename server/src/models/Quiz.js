@@ -7,6 +7,8 @@ const quizQuestionSchema = new mongoose.Schema(
     correctAnswer: { type: Number, required: true },
     explanation: { type: String, default: '' },
     topic: { type: String, default: '' },
+    tags: [{ type: String }],
+    difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium' },
     skillId: { type: mongoose.Schema.Types.ObjectId, ref: 'Skill' },
     source: {
       documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
@@ -23,6 +25,10 @@ const quizSchema = new mongoose.Schema(
     documentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     title: { type: String, required: true },
     topic: { type: String, default: '' },
+    youtubeResourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'YouTubeResource', default: null, index: true },
+    youtubeLearningItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'YouTubeLearningItem', default: null, index: true },
+    contentSource: { type: String, enum: ['document', 'metadata', 'transcript', 'topic'], default: 'topic' },
+    sourceLabel: { type: String, default: '' },
     difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium' },
     questionType: { type: String, enum: ['MCQ', 'True/False'], default: 'MCQ' },
     questions: [quizQuestionSchema],
@@ -31,5 +37,7 @@ const quizSchema = new mongoose.Schema(
   },
   { timestamps: true },
 )
+
+quizSchema.index({ youtubeLearningItemId: 1 }, { unique: true, partialFilterExpression: { youtubeLearningItemId: { $type: 'objectId' } } })
 
 export const Quiz = mongoose.model('Quiz', quizSchema)

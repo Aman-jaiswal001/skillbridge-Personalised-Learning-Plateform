@@ -26,6 +26,7 @@ async function openaiChat(messages) {
         content: m.content,
       })),
     }),
+    signal: AbortSignal.timeout(30000),
   })
   if (!res.ok) {
     const body = await res.text()
@@ -52,6 +53,7 @@ async function geminiChat(messages) {
       contents,
       generationConfig: { temperature: 0.2 },
     }),
+    signal: AbortSignal.timeout(30000),
   })
   if (!res.ok) {
     const body = await res.text()

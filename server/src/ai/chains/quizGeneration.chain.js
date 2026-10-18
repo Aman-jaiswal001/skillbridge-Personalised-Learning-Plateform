@@ -1,6 +1,7 @@
 import { buildQuizPrompt } from '../prompts/quiz.prompt.js'
 import { invokeJson } from '../llm/llm.provider.js'
 import { hasLiveLlm } from '../../config/ai.js'
+import { ApiError } from '../../utils/ApiError.js'
 
 function sentencesFrom(context) {
   return context
@@ -65,6 +66,8 @@ export function validateGeneratedQuestions({ questions, questionType, numberOfQu
       correctAnswer,
       explanation: String(q.explanation || 'See the source material.').trim(),
       topic: String(q.topic || '').trim(),
+      tags: Array.isArray(q.tags) ? [...new Set(q.tags.map((tag) => String(tag).trim()).filter(Boolean))].slice(0, 8) : [],
+      difficulty: ['Easy', 'Medium', 'Hard'].includes(q.difficulty) ? q.difficulty : undefined,
       pageNumber: Number(q.pageNumber) || 1,
     })
   }
@@ -94,5 +97,46 @@ export async function runQuizGenerationChain({ topic, difficulty, questionType, 
     questions: fallbackQuestions({ topic, numberOfQuestions, questionType, context, chunks }),
     questionType,
     numberOfQuestions,
+  })
+}
+
+export async function runLessonQuizGeneration({ topic, difficulty, numberOfQuestions, context }) {
+  let questions
+  if (hasLiveLlm()) {
+    try {
+      const json = await invokeJson(buildQuizPrompt({ topic, difficulty, questionType: 'MCQ', numberOfQuestions, context: context.slice(0, 12000) }))
+      questions = validateGeneratedQuestions({ questions: json.questions, questionType: 'MCQ', numberOfQuestions })
+    } catch (error) {
+      console.error('[lesson-quiz] AI generation failed; using metadata-only questions', error.message)
+    }
+  }
+  if (!questions) questions = metadataQuestions({ topic, difficulty, numberOfQuestions, context })
+  if (questions.length < 5 || questions.some((q) => q.options.length !== 4)) {
+    throw ApiError.unprocessable('Not enough distinct lesson metadata to prepare five quiz questions. Add learning objectives, subtopics, or skill tags and retry.')
+  }
+  return questions.slice(0, numberOfQuestions).map((q) => ({ ...q, difficulty: q.difficulty || difficulty, topic: q.topic || topic, tags: q.tags?.length ? q.tags : [q.topic || topic] }))
+}
+
+function metadataQuestions({ topic, difficulty, numberOfQuestions, context }) {
+  const facts = [...new Map(context.split('\n').flatMap((line) => {
+    const separator = line.indexOf(':')
+    const kind = line.slice(0, separator).replace(/^Lesson /, '').toLowerCase()
+    return line.slice(separator + 1).split(/[;,]|(?<=[.!?])\s+/).map((value) => [value.trim().toLowerCase(), { value: value.trim(), kind }]).filter(([key, fact]) => key.length >= 4 && key !== 'not provided.' && fact.value)
+  })).values()]
+  if (facts.length < 5) return []
+  return facts.slice(0, numberOfQuestions).map((fact, index) => {
+    const distractors = facts.filter((value) => value.value !== fact.value).slice(0, 3).map((value) => value.value)
+    const correctAnswer = index % 4
+    const options = [...distractors]
+    options.splice(correctAnswer, 0, fact.value)
+    return {
+      question: `Which ${fact.kind === 'description' ? 'statement' : fact.kind.replace(/s$/, '')} is explicitly listed in the saved lesson metadata for ${topic}?`,
+      options,
+      correctAnswer,
+      explanation: `“${fact.value}” is listed in the saved lesson metadata.`,
+      topic,
+      tags: [topic],
+      difficulty,
+    }
   })
 }

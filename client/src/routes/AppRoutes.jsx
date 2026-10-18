@@ -10,6 +10,7 @@ import Loading from "../components/common/Loading";
 import { useAuth } from "../context/AuthContext";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import EmployeeManagement from "../pages/admin/EmployeeManagement";
+import YouTubeResourceManagement from "../pages/admin/YouTubeResourceManagement";
 import Reports from "../pages/admin/Reports";
 import Login from "../pages/auth/Login";
 import AIAssistant from "../pages/employee/AIAssistant";
@@ -30,6 +31,12 @@ import Settings from "../pages/employee/Settings";
 import SkillGap from "../pages/employee/SkillGap";
 import NotFound from "../pages/NotFound";
 import Landing from "../pages/public/Landing";
+import YouTubeCatalog from "../pages/employee/YouTubeCatalog";
+import YouTubeLesson from "../pages/employee/YouTubeLesson";
+import StudyResources from "../pages/employee/StudyResources";
+import StudyResourceManagement from "../pages/admin/StudyResourceManagement";
+import VideoQuiz from "../pages/employee/VideoQuiz";
+import VideoQuizResult from "../pages/employee/VideoQuizResult";
 
 export default function AppRoutes() {
   return (
@@ -51,6 +58,11 @@ export default function AppRoutes() {
             <Route path="/skill-gaps" element={<SkillGap />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/courses/:id" element={<CourseDetails />} />
+            <Route path="/youtube-learning" element={<YouTubeCatalog />} />
+            <Route path="/youtube-learning/items/:itemId" element={<YouTubeLesson />} />
+            <Route path="/youtube-learning/items/:itemId/quiz" element={<VideoQuiz />} />
+            <Route path="/youtube-learning/quiz/:quizId/result" element={<VideoQuizResult />} />
+            <Route path="/study-resources" element={<StudyResources />} />
             <Route path="/assistant" element={<AIAssistant />} />
             <Route path="/quiz-generator" element={<QuizGenerator />} />
             <Route path="/quiz" element={<GeneratedQuiz />} />
@@ -67,6 +79,8 @@ export default function AppRoutes() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/employees" element={<EmployeeManagement />} />
             <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/youtube-learning" element={<YouTubeResourceManagement />} />
+            <Route path="/admin/study-resources" element={<StudyResourceManagement />} />
           </Route>
         </Route>
 
