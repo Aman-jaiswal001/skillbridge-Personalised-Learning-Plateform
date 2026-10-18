@@ -1,12 +1,15 @@
 import fs from 'node:fs'
 import multer from 'multer'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { env } from '../config/env.js'
 import { ApiError } from '../utils/ApiError.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-export const uploadRoot = path.resolve(__dirname, '../../', env.uploadDir)
+export const uploadRoot = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'skillbridge-uploads')
+  : path.resolve(__dirname, '../../', env.uploadDir)
 
 if (!fs.existsSync(uploadRoot)) {
   fs.mkdirSync(uploadRoot, { recursive: true })
