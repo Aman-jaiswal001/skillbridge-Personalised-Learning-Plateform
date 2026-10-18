@@ -1,25 +1,43 @@
 import fs from 'node:fs'
+import multer from 'multer'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import multer from 'multer'
 import { env } from '../config/env.js'
 import { ApiError } from '../utils/ApiError.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const uploadRoot = path.resolve(__dirname, '../../', env.uploadDir)
+export const uploadRoot = path.resolve(__dirname, '../../', env.uploadDir)
 
 if (!fs.existsSync(uploadRoot)) {
   fs.mkdirSync(uploadRoot, { recursive: true })
 }
 
-const allowed = new Set([
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/plain',
+const allowedTypes = new Map([
+  ['.pdf', 'application/pdf'],
+  [
+    '.docx',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ],
+  [
+    '.pptx',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  ],
+  ['.txt', 'text/plain'],
 ])
 
-const extensions = new Set(['.pdf', '.docx', '.pptx', '.txt'])
+function fileFilter(_req, file, cb) {
+  const ext = path.extname(file.originalname).toLowerCase()
+
+  if (allowedTypes.get(ext) !== file.mimetype) {
+    return cb(
+      ApiError.unsupported(
+        'Only PDF, DOCX, PPTX and TXT files are allowed',
+      ),
+    )
+  }
+
+  cb(null, true)
+}
 
 const storage = multer.diskStorage({
   destination(_req, _file, cb) {
@@ -31,18 +49,8 @@ const storage = multer.diskStorage({
   },
 })
 
-function fileFilter(_req, file, cb) {
-  const ext = path.extname(file.originalname).toLowerCase()
-  if (!extensions.has(ext) && !allowed.has(file.mimetype)) {
-    return cb(ApiError.unsupported('Only PDF, DOCX, PPTX and TXT files are allowed'))
-  }
-  cb(null, true)
-}
-
 export const uploadDocument = multer({
   storage,
   fileFilter,
   limits: { fileSize: env.maxFileSize },
 }).single('file')
-
-export { uploadRoot }
