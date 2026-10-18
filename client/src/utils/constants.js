@@ -22,6 +22,7 @@ export const adminNav = [
   { to: '/admin', label: 'Admin Dashboard', icon: 'LayoutDashboard' },
   { to: '/admin/employees', label: 'Employees', icon: 'Users' },
   { to: '/admin/reports', label: 'Reports', icon: 'FileBarChart' },
+  { to: '/admin/assessments', label: 'Assessments', icon: 'ClipboardList' },
   { to: '/admin/youtube-learning', label: 'YouTube Learning', icon: 'BookOpen' },
   { to: '/admin/study-resources', label: 'Study Resources', icon: 'BookOpen' },
   // { to: '/dashboard', label: 'Employee View', icon: 'ArrowLeftRight' },

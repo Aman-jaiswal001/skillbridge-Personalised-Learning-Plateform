@@ -6,6 +6,10 @@ import { fail } from '../utils/response.js'
 export function errorMiddleware(err, req, res, _next) {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
+      if (req.originalUrl.includes('/assessments/import')) {
+        const limitMb = (env.assessmentImportMaxFileSize / 1024 / 1024).toFixed(1).replace(/\.0$/, '')
+        return fail(res, `Spreadsheet exceeds the ${limitMb} MB limit`, 413)
+      }
       return fail(res, 'File exceeds the 20MB limit', 413)
     }
     return fail(res, err.message || 'Upload error', 400)

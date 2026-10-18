@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ArrowRight, BookOpen, CheckCircle2, ClipboardCheck, Flame, Sparkles, Target } from 'lucide-react'
+import { ArrowRight, BookOpen, CheckCircle2, ClipboardCheck, FileText, Flame, PlayCircle, Sparkles, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { normalizeCourse, normalizeNotification } from '../../api/normalizers'
 import CourseCard from '../../components/common/CourseCard'
@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApiData } from '../../hooks/useApiData'
 
 const cardClass = 'min-w-0 rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-5'
+const mapStudyResources = (items, payload) => ({ items, pagination: payload?.pagination })
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -22,6 +23,9 @@ export default function Dashboard() {
   const { data: learningPath } = useApiData('/learning-path', { initialData: { stages: [] } })
   const { data: notificationData = [] } = useApiData('/notifications', { initialData: [] })
   const { data: quizPerformance } = useApiData('/quiz/performance', { initialData: null })
+  const { data: assessmentHistory = [] } = useApiData('/assessments/history', { initialData: [] })
+  const { data: videoItems = [] } = useApiData('/youtube-learning/items', { initialData: [] })
+  const { data: studyResources = { items: [], pagination: {} } } = useApiData('/study-resources?limit=1', { initialData: { items: [], pagination: {} }, map: mapStudyResources })
 
   useEffect(() => {
     const onFocus = () => reloadBundle()
@@ -38,6 +42,8 @@ export default function Dashboard() {
   const recommended = recommendationData.map(normalizeCourse).slice(0, 3)
   const activity = notificationData.map(normalizeNotification).slice(0, 4)
   const goal = bundle?.profile?.careerGoal || bundle?.profile?.jobRole || user?.designation || 'Choose a career goal in your profile'
+  const completedVideoItems = videoItems.filter((item) => item.status === 'Completed').length
+  const totalStudyResources = Number(studyResources?.pagination?.total ?? studyResources?.items?.length ?? 0)
 
   return (
     <PageContainer title={`Good to see you, ${bundle?.user?.name || user?.name?.split(' ')[0] || 'learner'}`} subtitle="Your next step toward the career you want starts here.">
@@ -63,6 +69,28 @@ export default function Dashboard() {
         <StatCard icon={BookOpen} label="Courses completed" value={stats.coursesCompleted ?? 0} />
         <StatCard icon={Flame} label="Learning streak" value={`${stats.streak ?? 0} days`} />
       </div>
+
+      <section className={cardClass}>
+        <SectionHeader title="Your learning at a glance" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Link to="/learning-path" className="flex min-h-20 items-center gap-3 rounded-xl border border-line p-3 transition hover:border-primary/40 hover:bg-slate-50">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-primary"><BookOpen size={18} /></span>
+            <span><span className="block text-lg font-bold text-navy">{courses.length}</span><span className="text-xs text-muted">Enrolled courses · {courses.filter((course) => course.progress >= 100).length} completed</span></span>
+          </Link>
+          <Link to="/youtube-learning" className="flex min-h-20 items-center gap-3 rounded-xl border border-line p-3 transition hover:border-primary/40 hover:bg-slate-50">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600"><PlayCircle size={18} /></span>
+            <span><span className="block text-lg font-bold text-navy">{videoItems.length}</span><span className="text-xs text-muted">Video lessons · {completedVideoItems} completed</span></span>
+          </Link>
+          <Link to="/study-resources" className="flex min-h-20 items-center gap-3 rounded-xl border border-line p-3 transition hover:border-primary/40 hover:bg-slate-50">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700"><FileText size={18} /></span>
+            <span><span className="block text-lg font-bold text-navy">{totalStudyResources}</span><span className="text-xs text-muted">Study resources available</span></span>
+          </Link>
+          <Link to="/assessment" className="flex min-h-20 items-center gap-3 rounded-xl border border-line p-3 transition hover:border-primary/40 hover:bg-slate-50">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700"><ClipboardCheck size={18} /></span>
+            <span><span className="block text-lg font-bold text-navy">{assessmentHistory.length}</span><span className="text-xs text-muted">Completed assessment attempts</span></span>
+          </Link>
+        </div>
+      </section>
 
       <section className={cardClass}>
         <SectionHeader title="Quiz performance" action={<Link to="/analytics" className="text-sm font-semibold text-primary">View analytics</Link>} />

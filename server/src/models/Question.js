@@ -12,8 +12,12 @@ const questionSchema = new mongoose.Schema(
     category: { type: String, default: '' },
     skill: { type: String, default: '', index: true },
     difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium' },
+    importFingerprint: { type: String, default: undefined },
+    importRequestId: { type: String, default: undefined },
   },
   { timestamps: true },
 )
+
+questionSchema.index({ assessmentId: 1, importFingerprint: 1 }, { unique: true, partialFilterExpression: { importFingerprint: { $type: 'string' } }, name: 'assessment_import_question_dedupe' })
 
 export const Question = mongoose.model('Question', questionSchema)

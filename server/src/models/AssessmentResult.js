@@ -38,6 +38,5 @@ const assessmentResultSchema = new mongoose.Schema(
 assessmentResultSchema.index({ employeeId: 1, assessmentId: 1, completedAt: -1 })
 assessmentResultSchema.index({ employeeId: 1, completedAt: -1 })
 assessmentResultSchema.index({ employeeId: 1, assessmentId: 1, status: 1 })
-assessmentResultSchema.index({ employeeId: 1, assessmentId: 1, status: 1 })
 
 export const AssessmentResult = mongoose.model('AssessmentResult', assessmentResultSchema)

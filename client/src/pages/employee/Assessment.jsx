@@ -3,6 +3,7 @@ import { ClipboardCheck, Clock3, RotateCcw } from 'lucide-react'
 import { normalizeAssessment } from '../../api/normalizers'
 import { apiRequest, extractData } from '../../api/client'
 import Button from '../../components/common/Button'
+import Badge from '../../components/common/Badge'
 import EmptyState from '../../components/common/EmptyState'
 import Loading from '../../components/common/Loading'
 import PageContainer from '../../components/common/PageContainer'
@@ -33,7 +34,7 @@ export default function Assessment() {
         {assessments.map((assessment) => (
           <article key={assessment.id} className="flex flex-col rounded-xl border border-line bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
-              <div><p className="text-xs font-semibold uppercase tracking-wide text-primary">{assessment.category || 'General'}</p><h2 className="mt-1 text-lg font-semibold text-navy">{assessment.title}</h2></div>
+              <div><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-wide text-primary">{assessment.category || 'General'}</p><Badge>{assessment.difficulty || 'Medium'}</Badge></div><h2 className="mt-1 text-lg font-semibold text-navy">{assessment.title}</h2></div>
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-primary"><ClipboardCheck size={20} /></span>
             </div>
             {assessment.description ? <p className="mt-3 line-clamp-3 text-sm text-muted">{assessment.description}</p> : null}

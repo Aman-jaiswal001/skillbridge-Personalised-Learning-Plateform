@@ -13,6 +13,11 @@ function requiredInProd(name) {
   return value || ''
 }
 
+function positiveInteger(name, fallback) {
+  const value = Number(process.env[name])
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 5000,
@@ -33,6 +38,8 @@ export const env = {
   igotAdapter: (process.env.IGOT_ADAPTER || 'mock').toLowerCase(),
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   maxFileSize: Number(process.env.MAX_FILE_SIZE) || 20 * 1024 * 1024,
+  assessmentImportMaxFileSize: positiveInteger('ASSESSMENT_IMPORT_MAX_FILE_SIZE', 5 * 1024 * 1024),
+  assessmentImportMaxRows: positiveInteger('ASSESSMENT_IMPORT_MAX_ROWS', 1000),
   quizReviewThreshold: Number(process.env.QUIZ_REVIEW_THRESHOLD) || 50,
   quizAdvanceThreshold: Number(process.env.QUIZ_ADVANCE_THRESHOLD) || 80,
   uploadDir: process.env.UPLOAD_DIR || 'uploads',

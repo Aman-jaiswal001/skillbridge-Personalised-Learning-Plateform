@@ -7,6 +7,8 @@ import { QuizAttempt } from '../models/QuizAttempt.js'
 import { Course } from '../models/Course.js'
 import { Assessment } from '../models/Assessment.js'
 import { AuditLog } from '../models/AuditLog.js'
+import { StudyResource } from '../models/StudyResource.js'
+import { YouTubeResource } from '../models/YouTubeResource.js'
 import { analyseEmployeeSkills } from '../ai/skillGap/skillGap.engine.js'
 import { ApiError } from '../utils/ApiError.js'
 
@@ -56,13 +58,18 @@ export async function employeeAnalytics(userId) {
 }
 
 export async function adminAnalytics() {
-  const [totalEmployees, activeLearners, courses, assessments, profiles, audit] = await Promise.all([
+  const [totalEmployees, activeEmployees, courses, assessments, profiles, audit, videoResources, publishedVideoResources, studyResources, publishedStudyResources, draftAssessments] = await Promise.all([
     User.countDocuments({ role: { $in: ['STUDENT', 'EMPLOYEE'] } }),
     User.countDocuments({ role: { $in: ['STUDENT', 'EMPLOYEE'] }, isActive: true }),
     Course.countDocuments({ isActive: true }),
-    Assessment.countDocuments({ isActive: true }),
+    Assessment.countDocuments({ isActive: true, isPublished: true }),
     EmployeeProfile.find().populate('userId', 'department isActive').lean(),
     AuditLog.find().sort({ timestamp: -1 }).limit(8).lean(),
+    YouTubeResource.countDocuments(),
+    YouTubeResource.countDocuments({ isPublished: true }),
+    StudyResource.countDocuments(),
+    StudyResource.countDocuments({ isPublished: true }),
+    Assessment.countDocuments({ isActive: true, isPublished: false }),
   ])
 
   const departmentMap = new Map()
@@ -95,10 +102,16 @@ export async function adminAnalytics() {
 
   return {
     totalEmployees,
-    activeLearners: totalEmployees ? Math.round((activeLearners / totalEmployees) * 100) : 0,
+    activeEmployees,
+    activeLearners: totalEmployees ? Math.round((activeEmployees / totalEmployees) * 100) : 0,
     averageCompetency: avgCompetency,
     totalCourses: courses,
     totalAssessments: assessments,
+    draftAssessments,
+    videoResources,
+    publishedVideoResources,
+    studyResources,
+    publishedStudyResources,
     departmentCompetency,
     skillGapDistribution: Object.entries(dist).map(([name, value]) => ({ name, value })),
     recentActivities: audit.map((a) => ({

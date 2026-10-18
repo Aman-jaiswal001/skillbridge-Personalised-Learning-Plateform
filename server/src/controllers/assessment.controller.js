@@ -41,3 +41,23 @@ export const result = asyncHandler(async (req, res) => {
   const data = await assessmentService.getAssessmentResult(req.user._id, req.params.resultId)
   success(res, data)
 })
+
+export const adminList = asyncHandler(async (_req, res) => {
+  success(res, await assessmentService.listAdminAssessments())
+})
+
+export const adminCreate = asyncHandler(async (req, res) => {
+  success(res, await assessmentService.createAssessment(req.body), 'Assessment saved as draft', 201)
+})
+
+export const adminUpdate = asyncHandler(async (req, res) => {
+  success(res, await assessmentService.updateAssessment(req.params.id, req.body), 'Assessment updated')
+})
+
+export const adminPublish = asyncHandler(async (req, res) => {
+  success(res, await assessmentService.setAssessmentPublished(req.params.id, req.body.published), req.body.published ? 'Assessment published' : 'Assessment unpublished')
+})
+
+export const adminArchive = asyncHandler(async (req, res) => {
+  success(res, await assessmentService.archiveAssessment(req.params.id), 'Assessment archived')
+})

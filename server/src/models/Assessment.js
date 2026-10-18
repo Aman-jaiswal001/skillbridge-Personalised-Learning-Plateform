@@ -12,6 +12,8 @@ const assessmentSchema = new mongoose.Schema(
       index: true,
     },
 
+    difficulty: { type: String, enum: ["Easy", "Medium", "Hard"], default: "Medium" },
+
     skills: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -57,6 +59,8 @@ const assessmentSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    isPublished: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },
 );

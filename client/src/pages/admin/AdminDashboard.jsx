@@ -1,18 +1,15 @@
-import { BookOpen, ClipboardList, UserPlus, Users } from 'lucide-react'
+import { BookOpen, ClipboardList, FileText, PlayCircle, UserPlus, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import Button from '../../components/common/Button'
 import ChartCard from '../../components/common/ChartCard'
 import Loading from '../../components/common/Loading'
 import PageContainer from '../../components/common/PageContainer'
 import StatCard from '../../components/common/StatCard'
-import { useToast } from '../../context/ToastContext'
 import { useApiData } from '../../hooks/useApiData'
 
 const colors = ['#DC2626', '#F97316', '#304FFE', '#16A34A', '#64748B']
 
 export default function AdminDashboard() {
-  const { push } = useToast()
   const { data, loading } = useApiData('/admin/dashboard', { initialData: null })
   const departmentCompetency = (data?.departmentCompetency || []).map((d) => ({
     dept: d.department,
@@ -26,9 +23,15 @@ export default function AdminDashboard() {
       {loading ? <Loading label="Loading admin dashboard..." /> : null}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard icon={Users} label="Total Employees" value={data?.totalEmployees ?? 0} />
-        <StatCard icon={UserPlus} label="Active Learners" value={`${data?.activeLearners ?? 0}%`} />
+        <StatCard icon={UserPlus} label="Active Employees" value={data?.activeEmployees ?? 0} />
         <StatCard icon={BookOpen} label="Courses" value={data?.totalCourses ?? 0} />
         <StatCard icon={ClipboardList} label="Assessments" value={data?.totalAssessments ?? 0} />
+      </div>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Link to="/admin/employees" className="rounded-xl border border-line bg-white p-4 transition hover:border-primary/40 hover:bg-slate-50"><p className="text-xs text-muted">Active learner rate</p><p className="mt-1 text-2xl font-bold text-navy">{data?.activeLearners ?? 0}%</p><p className="mt-1 text-xs text-muted">Of {data?.totalEmployees ?? 0} employees</p></Link>
+        <Link to="/admin/assessments" className="rounded-xl border border-line bg-white p-4 transition hover:border-primary/40 hover:bg-slate-50"><p className="text-xs text-muted">Assessment drafts</p><p className="mt-1 text-2xl font-bold text-navy">{data?.draftAssessments ?? 0}</p><p className="mt-1 text-xs text-muted">Ready for review and publishing</p></Link>
+        <Link to="/admin/youtube-learning" className="rounded-xl border border-line bg-white p-4 transition hover:border-primary/40 hover:bg-slate-50"><div className="flex items-center gap-2 text-muted"><PlayCircle size={15} /><p className="text-xs">Video library</p></div><p className="mt-1 text-2xl font-bold text-navy">{data?.publishedVideoResources ?? 0}<span className="text-sm font-medium text-muted"> / {data?.videoResources ?? 0} published</span></p></Link>
+        <Link to="/admin/study-resources" className="rounded-xl border border-line bg-white p-4 transition hover:border-primary/40 hover:bg-slate-50"><div className="flex items-center gap-2 text-muted"><FileText size={15} /><p className="text-xs">Study resources</p></div><p className="mt-1 text-2xl font-bold text-navy">{data?.publishedStudyResources ?? 0}<span className="text-sm font-medium text-muted"> / {data?.studyResources ?? 0} published</span></p></Link>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Department-wise Competency">
@@ -78,17 +81,14 @@ export default function AdminDashboard() {
                 Add Employee
               </Button>
             </Link>
-            <Button variant="secondary" onClick={() => push('Course creation is available through the backend API.')}>
-              Upload Course
-            </Button>
+            <Link to="/admin/youtube-learning"><Button className="w-full" variant="secondary">Manage Video Library</Button></Link>
+            <Link to="/admin/assessments"><Button className="w-full" variant="secondary">Manage Assessments</Button></Link>
+            <Link to="/admin/study-resources"><Button className="w-full" variant="secondary">Manage Study Resources</Button></Link>
             <Link to="/admin/reports">
               <Button className="w-full" variant="secondary">
                 Generate Report
               </Button>
             </Link>
-            <Button variant="secondary" onClick={() => push('Use Employee Management to broadcast notifications next.')}>
-              Send Notification
-            </Button>
           </div>
         </div>
       </div>

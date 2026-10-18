@@ -35,6 +35,8 @@ import YouTubeCatalog from "../pages/employee/YouTubeCatalog";
 import YouTubeLesson from "../pages/employee/YouTubeLesson";
 import StudyResources from "../pages/employee/StudyResources";
 import StudyResourceManagement from "../pages/admin/StudyResourceManagement";
+import AssessmentManagement from "../pages/admin/AssessmentManagement";
+import BulkAssessmentUpload from "../pages/admin/BulkAssessmentUpload";
 import VideoQuiz from "../pages/employee/VideoQuiz";
 import VideoQuizResult from "../pages/employee/VideoQuizResult";
 
@@ -79,6 +81,8 @@ export default function AppRoutes() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/employees" element={<EmployeeManagement />} />
             <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/assessments" element={<AssessmentManagement />} />
+            <Route path="/admin/assessments/bulk-upload" element={<BulkAssessmentUpload />} />
             <Route path="/admin/youtube-learning" element={<YouTubeResourceManagement />} />
             <Route path="/admin/study-resources" element={<StudyResourceManagement />} />
           </Route>

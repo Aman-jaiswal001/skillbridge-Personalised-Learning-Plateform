@@ -1,6 +1,8 @@
 import mongoose from 'mongoose'
 import { env } from './env.js'
 import { YouTubeResource } from '../models/YouTubeResource.js'
+import { Question } from '../models/Question.js'
+import { AssessmentImport } from '../models/AssessmentImport.js'
 
 async function migrateYouTubeResourceTextIndex() {
   const collectionName = YouTubeResource.collection.collectionName
@@ -24,6 +26,8 @@ export async function connectDb() {
   mongoose.set('strictQuery', true)
   await mongoose.connect(env.mongoUri)
   await migrateYouTubeResourceTextIndex()
+  await Question.createIndexes()
+  await AssessmentImport.createIndexes()
   console.info('[db] MongoDB connected')
 }
 

@@ -36,7 +36,7 @@ function publicQuestion(q) {
 
 async function loadAssessment(id) {
   requireObjectId(id, 'assessment ID')
-  const assessment = await Assessment.findOne({ _id: id, isActive: true }).populate('skills', 'name')
+  const assessment = await Assessment.findOne({ _id: id, isActive: true, isPublished: { $ne: false } }).populate('skills', 'name')
   if (!assessment) throw ApiError.notFound('Assessment not found')
   return assessment
 }
@@ -51,7 +51,7 @@ async function loadQuestions(assessment, { privateKey = false } = {}) {
 
 export async function listAssessments(userId) {
   const [assessments, attempts] = await Promise.all([
-    Assessment.find({ isActive: true }).populate('skills', 'name').lean(),
+    Assessment.find({ isActive: true, isPublished: { $ne: false } }).populate('skills', 'name').lean(),
     AssessmentResult.find({ employeeId: userId }).sort({ startedAt: -1, createdAt: -1 }).lean(),
   ])
   const byAssessment = new Map()
@@ -82,6 +82,122 @@ export async function listAssessments(userId) {
       } : null,
     }
   })
+}
+
+function normalizeAssessmentInput(input) {
+  const title = String(input.title || '').trim()
+  const topic = String(input.topic || input.category || '').trim()
+  const description = String(input.description || '').trim()
+  const difficulty = input.difficulty || 'Medium'
+  const duration = Number(input.duration || 30)
+  const passingScore = Number(input.passingScore ?? 60)
+  if (!title || title.length > 160) throw ApiError.badRequest('Assessment title is required (up to 160 characters)')
+  if (!topic || topic.length > 120) throw ApiError.badRequest('Assessment topic is required (up to 120 characters)')
+  if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) throw ApiError.badRequest('Choose Easy, Medium, or Hard difficulty')
+  if (!Number.isInteger(duration) || duration < 1 || duration > 300) throw ApiError.badRequest('Duration must be from 1 to 300 minutes')
+  if (!Number.isFinite(passingScore) || passingScore < 0 || passingScore > 100) throw ApiError.badRequest('Passing score must be between 0 and 100')
+  if (!Array.isArray(input.questions) || input.questions.length < 1 || input.questions.length > 100) throw ApiError.badRequest('Add between 1 and 100 questions')
+  const questions = input.questions.map((item, index) => {
+    const question = String(item?.question || '').trim()
+    const options = Array.isArray(item?.options) ? item.options.map((option) => String(option || '').trim()) : []
+    const correctAnswer = item?.correctAnswer === '' || item?.correctAnswer === undefined || item?.correctAnswer === null
+      ? Number.NaN
+      : Number(item.correctAnswer)
+    const questionDifficulty = item?.difficulty || difficulty
+    if (!question) throw ApiError.badRequest(`Question ${index + 1} is required`)
+    if (options.length !== 4 || options.some((option) => !option)) throw ApiError.badRequest(`Question ${index + 1} must have four non-empty choices`)
+    if (!Number.isInteger(correctAnswer) || correctAnswer < 0 || correctAnswer > 3) throw ApiError.badRequest(`Choose the correct answer for question ${index + 1}`)
+    if (!['Easy', 'Medium', 'Hard'].includes(questionDifficulty)) throw ApiError.badRequest(`Question ${index + 1} has an invalid difficulty`)
+    return { question, options, correctAnswer, difficulty: questionDifficulty, category: topic, skill: topic, marks: 1 }
+  })
+  return { title, category: topic, description, difficulty, duration, durationLabel: `${duration} min`, passingScore, allowRetakes: input.allowRetakes !== false, questions }
+}
+
+export async function listAdminAssessments() {
+  const assessments = await Assessment.find().populate('questions').sort({ updatedAt: -1 }).lean()
+  return Promise.all(assessments.map(async (assessment) => ({
+    ...assessment,
+    attemptCount: await AssessmentResult.countDocuments({ assessmentId: assessment._id }),
+  })))
+}
+
+export async function createAssessment(input) {
+  const data = normalizeAssessmentInput(input)
+  const assessment = await Assessment.create({
+    title: data.title,
+    category: data.category,
+    description: data.description,
+    difficulty: data.difficulty,
+    duration: data.duration,
+    durationLabel: data.durationLabel,
+    passingScore: data.passingScore,
+    allowRetakes: data.allowRetakes,
+    status: 'Upcoming',
+    isActive: true,
+    isPublished: false,
+    questions: [],
+  })
+  let questions = []
+  try {
+    questions = await Question.insertMany(data.questions.map((question) => ({ ...question, assessmentId: assessment._id })))
+    assessment.questions = questions.map((question) => question._id)
+    await assessment.save()
+    return { ...assessment.toObject(), questions }
+  } catch (error) {
+    if (questions.length) await Question.deleteMany({ _id: { $in: questions.map((question) => question._id) } }).catch(() => {})
+    await Assessment.deleteOne({ _id: assessment._id }).catch(() => {})
+    throw error
+  }
+}
+
+export async function updateAssessment(id, input) {
+  requireObjectId(id, 'assessment ID')
+  const assessment = await Assessment.findById(id)
+  if (!assessment) throw ApiError.notFound('Assessment not found')
+  if (await AssessmentResult.exists({ assessmentId: id })) throw ApiError.conflict('An assessment with student attempts cannot be edited. Create a new assessment to preserve its history.')
+  const data = normalizeAssessmentInput(input)
+  const previousQuestionIds = assessment.questions
+  let questions = []
+  try {
+    questions = await Question.insertMany(data.questions.map((question) => ({ ...question, assessmentId: assessment._id })))
+    Object.assign(assessment, {
+      title: data.title,
+      category: data.category,
+      description: data.description,
+      difficulty: data.difficulty,
+      duration: data.duration,
+      durationLabel: data.durationLabel,
+      passingScore: data.passingScore,
+      allowRetakes: data.allowRetakes,
+      questions: questions.map((question) => question._id),
+    })
+    await assessment.save()
+  } catch (error) {
+    if (questions.length) await Question.deleteMany({ _id: { $in: questions.map((question) => question._id) } }).catch(() => {})
+    throw error
+  }
+  if (previousQuestionIds.length) await Question.deleteMany({ _id: { $in: previousQuestionIds } }).catch((error) => console.error('[assessment] obsolete question cleanup failed', error.message))
+  return { ...assessment.toObject(), questions }
+}
+
+export async function setAssessmentPublished(id, published) {
+  requireObjectId(id, 'assessment ID')
+  if (typeof published !== 'boolean') throw ApiError.badRequest('published must be true or false')
+  const assessment = await Assessment.findById(id)
+  if (!assessment) throw ApiError.notFound('Assessment not found')
+  if (published && !assessment.questions?.length) throw ApiError.badRequest('Add questions before publishing this assessment')
+  assessment.isPublished = published
+  assessment.isActive = true
+  assessment.status = published ? 'Active' : 'Upcoming'
+  await assessment.save()
+  return assessment
+}
+
+export async function archiveAssessment(id) {
+  requireObjectId(id, 'assessment ID')
+  const assessment = await Assessment.findByIdAndUpdate(id, { isActive: false, isPublished: false }, { new: true })
+  if (!assessment) throw ApiError.notFound('Assessment not found')
+  return assessment
 }
 
 export async function startAttempt(userId, assessmentId) {
