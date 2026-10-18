@@ -51,6 +51,9 @@ export function createApp() {
     })
   }
   app.use('/api', apiLimiter)
+  app.get("/", (req, res) => {
+  res.send("🚀 server is running...");
+});
 
   app.get('/api/health', (_req, res) => {
     res.json({
