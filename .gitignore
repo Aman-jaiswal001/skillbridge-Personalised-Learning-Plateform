@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 .env
+.env.*
+!.env.example
+.vercel
 server/uploads/*
 !server/uploads/.gitkeep
 

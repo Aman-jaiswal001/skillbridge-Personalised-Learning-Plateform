@@ -1,22 +1,18 @@
 export const seedUsers = [
   {
-    name: 'Meera Joshi',
-    email: 'admin@skillbridge.gov.in',
-    password: 'password',
-    employeeId: 'ADM001',
+    name: 'Demo Administrator',
+    email: 'admin@example.com',
+    employeeId: 'DEMO-ADMIN',
     role: 'ADMIN',
-    department: 'MOSPI HQ',
-    designation: 'Joint Director (Capacity Building)',
-    phone: '+91 98100 00001',
+    department: 'Sample Department',
+    designation: 'Administrator',
   },
   {
-    name: 'Ananya Iyer',
-    email: 'ananya.iyer@nssta.gov.in',
-    password: 'password',
-    employeeId: 'TRN001',
+    name: 'Demo Learner',
+    email: 'learner@example.com',
+    employeeId: 'DEMO-LEARNER',
     role: 'STUDENT',
-    department: 'Btech',
+    department: 'Sample Department',
     designation: 'Student',
-    phone: '+91 98100 00002',
   }
 ]

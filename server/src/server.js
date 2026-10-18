@@ -16,4 +16,12 @@ async function start() {
   }
 }
 
-start()
+if (process.env.VERCEL) {
+  // Vercel imports this module as a serverless Express handler. Connect once
+  // during the instance's cold start and let Vercel manage the HTTP lifecycle.
+  await connectDb()
+} else {
+  start()
+}
+
+export default app

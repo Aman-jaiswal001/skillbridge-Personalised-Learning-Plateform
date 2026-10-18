@@ -1,20 +1,21 @@
-# SkillBridge AI
+# SkillBridge AI frontend
 
-AI-Powered Personalized Learning & Competency Platform — frontend only (dummy data).
+The React/Vite student and admin interface lives in this directory. For complete setup, API environment variables, security notes, and separate Vercel deployment instructions, see the [repository README](../README.md).
 
-## Stack
-
-- React + Vite
-- Tailwind CSS
-- React Router DOM
-- Lucide React
-- Recharts
-
-## Run
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Sign in from `/login` (any credentials) to reach the employee dashboard. Admin screens live at `/admin`.
+Vite proxies `/api` requests to `http://localhost:5000` while developing. Start the API from `../server` in another terminal.
+
+## Build and lint
+
+```bash
+npm run build
+npm run lint
+```
+
+Vercel uses this folder as the project root. Set `VITE_API_URL` to the deployed API origin followed by `/api`; the value is public in the generated frontend bundle and must not contain secrets.
