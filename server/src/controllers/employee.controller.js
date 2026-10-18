@@ -16,6 +16,11 @@ export const updateMe = asyncHandler(async (req, res) => {
   success(res, data, 'Profile updated')
 })
 
+export const updateProfilePhoto = asyncHandler(async (req, res) => {
+  const user = await employeeService.updateProfilePhoto(req.user._id, req.file)
+  success(res, user, 'Profile photo updated')
+})
+
 export const mySkills = asyncHandler(async (req, res) => {
   const data = await employeeService.listMySkills(req.user._id)
   success(res, data)

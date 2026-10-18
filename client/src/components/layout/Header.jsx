@@ -38,7 +38,7 @@ export default function Header({ onMenu }) {
             onClick={() => setOpen((v) => !v)}
             className="flex items-center gap-2 rounded-lg border border-line px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <img src={avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+            <img src={user?.profilePhotoUrl || avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
             <span className="hidden text-left sm:block">
               <span className="block text-xs font-semibold text-navy">{user?.name || 'SkillBridge User'}</span>
               <span className="block text-[10px] text-muted">{user?.designation || user?.role}</span>

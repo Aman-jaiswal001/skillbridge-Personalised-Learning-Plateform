@@ -6,6 +6,7 @@ import { Progress } from '../models/Progress.js'
 import { AssessmentResult } from '../models/AssessmentResult.js'
 import { YouTubeLearningItem } from '../models/YouTubeLearningItem.js'
 import { ApiError } from '../utils/ApiError.js'
+import { deleteProfilePhoto, uploadProfilePhoto } from './cloudinaryStorage.service.js'
 import { analyseEmployeeSkills, percentToLevel } from '../ai/skillGap/skillGap.engine.js'
 import { mapCompetencyScore } from '../ai/skillGap/competencyMapper.js'
 import { calculateSkillProficiency, getSkillAssessmentEvidence, MASTERY_LEVELS, masteryLevelRank, normalizeMasteryLevel, skillProgressStatus, startingMasteryLevel, unlockedMasteryLevel, updateMasteryUnlock } from '../utils/skillProgress.js'
@@ -67,6 +68,37 @@ export async function updateMe(userId, payload) {
     { new: true, upsert: true },
   )
   return { user: user.toSafeJSON(), profile }
+}
+
+export async function updateProfilePhoto(userId, file) {
+  if (!file?.buffer?.length) throw ApiError.badRequest('Choose a profile photo to upload')
+  if (file.buffer.length > 5 * 1024 * 1024) throw ApiError.payloadTooLarge('Profile photos must be 5 MB or smaller')
+  const signature = file.buffer
+  const actualType = signature[0] === 0xff && signature[1] === 0xd8 && signature[2] === 0xff
+    ? 'image/jpeg'
+    : signature[0] === 0x89 && signature.subarray(1, 4).toString() === 'PNG'
+      ? 'image/png'
+      : signature.subarray(0, 4).toString() === 'RIFF' && signature.subarray(8, 12).toString() === 'WEBP'
+        ? 'image/webp'
+        : ''
+  if (!actualType || actualType !== file.mimetype) throw ApiError.unsupported('The profile photo must be a valid JPG, PNG, or WebP image')
+
+  const user = await User.findById(userId).select('+profilePhotoPublicId')
+  if (!user) throw ApiError.notFound('Employee not found')
+  const uploaded = await uploadProfilePhoto(file)
+  const previousPublicId = user.profilePhotoPublicId
+  user.profilePhotoUrl = uploaded.secureUrl
+  user.profilePhotoPublicId = uploaded.publicId
+  try {
+    await user.save()
+  } catch (error) {
+    await deleteProfilePhoto(uploaded.publicId).catch(() => {})
+    throw error
+  }
+  if (previousPublicId && previousPublicId !== uploaded.publicId) {
+    await deleteProfilePhoto(previousPublicId).catch((error) => console.error('[profile] old photo cleanup failed', error.message))
+  }
+  return user.toSafeJSON()
 }
 
 export async function listMySkills(userId) {

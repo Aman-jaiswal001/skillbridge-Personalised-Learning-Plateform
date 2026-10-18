@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema(
     department: { type: String, default: '', index: true },
     designation: { type: String, default: '' },
     phone: { type: String, default: '' },
+    profilePhotoUrl: { type: String, default: '' },
+    profilePhotoPublicId: { type: String, default: '', select: false },
     isActive: { type: Boolean, default: true, index: true },
     lastLogin: { type: Date },
     resetPasswordToken: { type: String, select: false },
@@ -33,6 +35,7 @@ userSchema.methods.comparePassword = function comparePassword(candidate) {
 userSchema.methods.toSafeJSON = function toSafeJSON() {
   const obj = this.toObject({ virtuals: true })
   delete obj.password
+  delete obj.profilePhotoPublicId
   delete obj.resetPasswordToken
   delete obj.resetPasswordExpires
   delete obj.__v
@@ -42,6 +45,7 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
 userSchema.set('toJSON', {
   transform(_doc, ret) {
     delete ret.password
+    delete ret.profilePhotoPublicId
     delete ret.resetPasswordToken
     delete ret.resetPasswordExpires
     delete ret.__v

@@ -3,6 +3,7 @@ import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const folder = "skillbridge/study-resources";
+const profilePhotoFolder = "skillbridge/profile-photos";
 
 function configured() {
   return Boolean(
@@ -94,6 +95,45 @@ export async function uploadStudyPdf(file, client) {
       },
     );
   });
+}
+
+export async function uploadProfilePhoto(file, client) {
+  client ||= await getCloudinary();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(ApiError.ai("Profile photo upload timed out. Try again.")), 60_000);
+    const stream = client.uploader.upload_stream(
+      {
+        resource_type: "image",
+        folder: profilePhotoFolder,
+        public_id: randomUUID(),
+        overwrite: false,
+        tags: ["skillbridge-profile-photo"],
+        transformation: [{ width: 1200, height: 1200, crop: "limit", quality: "auto", fetch_format: "auto" }],
+      },
+      (error, result) => {
+        clearTimeout(timeout);
+        if (error) {
+          console.error("[cloudinary] profile photo upload failed", {
+            code: String(error.http_code || error.code || ""),
+          });
+          return reject(ApiError.ai("Cloudinary could not save the profile photo. Check the storage configuration and try again."));
+        }
+        if (!result?.public_id || result.resource_type !== "image" || !result.secure_url) {
+          if (result?.public_id) client.uploader.destroy(result.public_id, { resource_type: "image", invalidate: true }, () => {});
+          return reject(ApiError.ai("Cloudinary returned invalid profile photo metadata"));
+        }
+        resolve({ publicId: result.public_id, secureUrl: result.secure_url });
+      },
+    );
+    stream.end(file.buffer);
+  });
+}
+
+export async function deleteProfilePhoto(publicId, client) {
+  if (!publicId || !publicId.startsWith(`${profilePhotoFolder}/`)) return;
+  client ||= await getCloudinary();
+  const result = await client.uploader.destroy(publicId, { resource_type: "image", type: "upload", invalidate: true });
+  if (!['ok', 'not found'].includes(result?.result)) throw ApiError.internal("Profile photo cleanup failed");
 }
 
 export async function deleteStudyPdf(publicId, resourceType = "raw", client) {
