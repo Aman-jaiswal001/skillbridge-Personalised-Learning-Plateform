@@ -1,8 +1,6 @@
 import { env } from './config/env.js'
 import { connectDb } from './config/db.js'
-import { createApp } from './app.js'
-
-const app = createApp()
+import app from './app.js'
 
 async function start() {
   try {
@@ -16,12 +14,6 @@ async function start() {
   }
 }
 
-if (process.env.VERCEL) {
-  // Vercel imports this module as a serverless Express handler. Connect once
-  // during the instance's cold start and let Vercel manage the HTTP lifecycle.
-  await connectDb()
-} else {
-  start()
-}
+if (!process.env.VERCEL) start()
 
 export default app

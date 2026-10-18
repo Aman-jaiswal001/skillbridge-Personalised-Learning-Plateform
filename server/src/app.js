@@ -1,8 +1,10 @@
 import express from 'express'
+import mongoose from 'mongoose'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import { env } from './config/env.js'
+import { connectDb } from './config/db.js'
 import { apiLimiter } from './middleware/rateLimit.middleware.js'
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware.js'
 import authRoutes from './routes/auth.routes.js'
@@ -23,6 +25,8 @@ import reportRoutes from './routes/report.routes.js'
 import youtubeLearningRoutes from './routes/youtubeLearning.routes.js'
 import studyResourceRoutes from './routes/studyResource.routes.js'
 
+let dbConnectionPromise
+
 export function createApp() {
   const app = express()
   app.set('trust proxy', 1)
@@ -36,6 +40,16 @@ export function createApp() {
   app.use(express.json({ limit: '2mb' }))
   app.use(express.urlencoded({ extended: true }))
   app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'))
+  if (process.env.VERCEL) {
+    app.use((_req, _res, next) => {
+      if (mongoose.connection.readyState === 1) return next()
+      dbConnectionPromise ||= connectDb().catch((error) => {
+        dbConnectionPromise = null
+        throw error
+      })
+      dbConnectionPromise.then(() => next(), next)
+    })
+  }
   app.use('/api', apiLimiter)
 
   app.get('/api/health', (_req, res) => {
@@ -68,3 +82,6 @@ export function createApp() {
   app.use(errorMiddleware)
   return app
 }
+
+const app = createApp()
+export default app
