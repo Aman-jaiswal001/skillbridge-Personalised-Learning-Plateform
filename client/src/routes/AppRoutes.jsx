@@ -13,6 +13,8 @@ import EmployeeManagement from "../pages/admin/EmployeeManagement";
 import YouTubeResourceManagement from "../pages/admin/YouTubeResourceManagement";
 import Reports from "../pages/admin/Reports";
 import Login from "../pages/auth/Login";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword from "../pages/auth/ResetPassword";
 import AIAssistant from "../pages/employee/AIAssistant";
 import Analytics from "../pages/employee/Analytics";
 import Assessment from "../pages/employee/Assessment";
@@ -46,6 +48,8 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route
           element={<ProtectedRoute roles={["STUDENT", "TRAINER", "ADMIN"]} />}

@@ -42,7 +42,7 @@ async function openaiEmbed(texts) {
 }
 
 async function geminiEmbed(texts) {
-  console.log('geminiEmbed moded called');
+  console.log('geminiEmbed model called');
   const out = []
   for (const text of texts) {
     const url =
